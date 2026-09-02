@@ -1,0 +1,6 @@
+{
+  "name": "PromptHire",
+  "description": "Enterprise AI Interview Simulator for behavioral, technical, and system design rounds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

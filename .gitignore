@@ -1,0 +1,150 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.so
+
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Environment variables
+# =========================
+
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Keep example environment file
+!.env.example
+
+# =========================
+# FastAPI / Application
+# =========================
+
+*.log
+logs/
+
+# SQLite / local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded files / generated data
+uploads/
+tmp/
+temp/
+
+# =========================
+# Jupyter
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+# Testing / Coverage
+# =========================
+
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+
+# =========================
+# IDEs
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# OS files
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Node / Vite / Frontend
+# =========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+dist/
+build/
+
+.vite/
+
+# =========================
+# Frontend environment
+# =========================
+
+.env.*.local
+
+# =========================
+# Secrets / Credentials
+# =========================
+
+*.pem
+*.key
+*.crt
+
+credentials.json
+service-account.json
+
+# =========================
+# Generated files
+# =========================
+
+*.csv
+*.xlsx
+*.parquet
+*.pkl
+*.pickle
+*.joblib
+
+# =========================
+# LangGraph / local state
+# =========================
+
+.checkpoints/
+.langgraph/
