@@ -37,8 +37,7 @@ export const Home: React.FC = () => {
           </h1>
 
           <p className="text-base sm:text-lg text-[#334155] font-serif leading-relaxed">
-            PromptHire conducts automated, multi-round technical and behavioral interviews
-            benchmarked against Microsoft enterprise engineering standards. Upload candidate
+            PromptHire conducts automated, multi-round technical and behavioral interviews. Upload candidate
             resumes and job descriptions to generate tailored competency rubrics.
           </p>
 
@@ -99,7 +98,7 @@ export const Home: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-[#0F172A]">Technical Depth</h3>
               <p className="text-xs text-[#64748B] leading-relaxed">
-                Probes React 19 Fiber reconciliation, TypeScript, browser rendering, memory optimization, and Web Vitals.
+                Evaluates coding proficiency, algorithmic thinking, system architecture, and problem-solving skills.
               </p>
               <div className="pt-2 flex items-center text-xs font-semibold text-[#2563EB]">
                 <span>10 Questions • ~25 Mins</span>
@@ -116,7 +115,7 @@ export const Home: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-[#0F172A]">System Design</h3>
               <p className="text-xs text-[#64748B] leading-relaxed">
-                Architect real-time collaborative cloud consoles, WebSockets, CRDTs, edge routing, and caching.
+                Evaluates system architecture, scalability, database design, and API integration skills through scenario-based questions.
               </p>
               <div className="pt-2 flex items-center text-xs font-semibold text-[#2563EB]">
                 <span>5 Questions • ~20 Mins</span>

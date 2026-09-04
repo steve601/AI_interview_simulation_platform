@@ -53,14 +53,14 @@ class GapAnalyzerPrompt:
                Before returning the response, verify that EVERY item in "gaps"
                contains all required fields, especially "score_band".
 
-               CANDIDATE CV ANALYSIS:
+               CANDIDATE CV:
                --- CV START ---
-               {cv_analysis}
+               {cv_text}
                --- CV END ---
 
-               JOB DESCRIPTION ANALYSIS:
+               JOB DESCRIPTION:
                --- JD START ---
-               {jd_analysis}
+               {jd_text}
                --- JD END ---
 
                Perform the gap analysis now.

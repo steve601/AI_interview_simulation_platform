@@ -14,14 +14,14 @@ class GapAnalyzerNode:
         """
         Analyzes the gap between the user's resume and the job description using a language model.
         """
-        cv_analysis = state["cv_analysis"]
-        jd_analysis = state["jd_analysis"]
+        cv_text = state["cv_text"]
+        jd_text = state["jd_text"]
 
         prompt = GapAnalyzerPrompt.get_prompt()
 
         chain = prompt | self.llm
 
-        result = chain.invoke({"cv_analysis": cv_analysis, "jd_analysis": jd_analysis})
+        result = chain.invoke({"cv_text": cv_text, "jd_text": jd_text})
 
         return {
             "gap_analysis": result

@@ -1,9 +1,16 @@
 /**
  * Server-Sent Events (SSE) streaming utilities.
  *
- * The backend uses `text/event-stream` to push interviewer
- * message tokens progressively. Each event has an `event:` field
- * (`token`, `done`, `error`) and a `data:` payload.
+ * Expected backend format:
+ *
+ * event: token
+ * data: Hello
+ *
+ * event: done
+ * data: true
+ *
+ * event: error
+ * data: Something went wrong
  */
 
 export type SSEEvent =
@@ -14,32 +21,52 @@ export type SSEEvent =
 export interface SSEOptions {
   onEvent: (event: SSEEvent) => void;
   onError?: (error: Error) => void;
-  /** Maximum time (ms) to wait for the stream to start before erroring. */
   connectTimeoutMs?: number;
-  /** AbortSignal to cancel the request externally. */
   signal?: AbortSignal;
 }
 
-function parseSSELine(line: string): { event: string; data: string } | null {
-  if (line.startsWith('event:')) {
-    return { event: 'event', data: line.slice(6).trim() };
+function dispatchEvent(
+  eventType: string,
+  eventData: string,
+  onEvent: (event: SSEEvent) => void,
+  onError?: (error: Error) => void
+): boolean {
+  if (!eventType) {
+    return false;
   }
-  if (line.startsWith('data:')) {
-    return { event: 'data', data: line.slice(5).trim() };
+
+  const type = eventType as SSEEvent['type'];
+
+  if (type !== 'token' && type !== 'done' && type !== 'error') {
+    return false;
   }
-  return null;
+
+  const event: SSEEvent = {
+    type,
+    data: eventData,
+  };
+
+  onEvent(event);
+
+  if (type === 'error') {
+    onError?.(new Error(eventData || 'Server returned an SSE error.'));
+    return true;
+  }
+
+  return type === 'done';
 }
 
-/**
- * Performs a POST to an SSE endpoint and dispatches parsed events.
- * Resolves when a `done` event arrives. Rejects on `error` or network failure.
- */
 export async function streamPOST(
   url: string,
   body: unknown,
   opts: SSEOptions
 ): Promise<void> {
-  const { onEvent, onError, signal } = opts;
+  const {
+    onEvent,
+    onError,
+    signal,
+    connectTimeoutMs = 30000,
+  } = opts;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -48,83 +75,314 @@ export async function streamPOST(
   };
 
   let resp: Response;
+
+  /*
+   * ------------------------------------------------------------
+   * Fetch
+   * ------------------------------------------------------------
+   */
+
   try {
-    resp = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-      signal,
-    });
+    const controller = new AbortController();
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const handleAbort = () => {
+      controller.abort();
+    };
+
+    if (signal) {
+      if (signal.aborted) {
+        return;
+      }
+
+      signal.addEventListener('abort', handleAbort, {
+        once: true,
+      });
+    }
+
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, connectTimeoutMs);
+
+    try {
+      resp = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (
+        err instanceof DOMException &&
+        err.name === 'AbortError'
+      ) {
+        if (signal?.aborted) {
+          return;
+        }
+
+        onError?.(
+          new Error(
+            `Connection timed out after ${connectTimeoutMs / 1000} seconds.`
+          )
+        );
+
+        return;
+      }
+
+      onError?.(
+        err instanceof Error
+          ? err
+          : new Error('Failed to connect to the interview server.')
+      );
+
+      return;
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
+      signal?.removeEventListener('abort', handleAbort);
+    }
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') return;
-    onError?.(err as Error);
+    onError?.(
+      err instanceof Error
+        ? err
+        : new Error('Failed to connect to the interview server.')
+    );
+
     return;
   }
 
-  if (!resp.ok || !resp.body) {
-    const text = await resp.text().catch(() => '');
-    const err = new Error(
-      `Server responded with ${resp.status}${text ? `: ${text}` : ''}`
+  /*
+   * ------------------------------------------------------------
+   * HTTP response validation
+   * ------------------------------------------------------------
+   */
+
+  if (!resp.ok) {
+    let detail = '';
+
+    try {
+      const contentType = resp.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        const json = await resp.json();
+        detail =
+          json?.detail ||
+          json?.message ||
+          JSON.stringify(json);
+      } else {
+        detail = await resp.text();
+      }
+    } catch {
+      // Ignore response parsing errors.
+    }
+
+    onError?.(
+      new Error(
+        `Server responded with ${resp.status}${
+          detail ? `: ${detail}` : ''
+        }`
+      )
     );
-    onError?.(err);
+
     return;
   }
+
+  if (!resp.body) {
+    onError?.(
+      new Error('The server returned an empty streaming response.')
+    );
+
+    return;
+  }
+
+  /*
+   * ------------------------------------------------------------
+   * SSE reader
+   * ------------------------------------------------------------
+   */
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder('utf-8');
+
   let buffer = '';
-  let currentEventField = '';
-  let currentEventData = '';
+  let currentEventType = '';
+  let currentEventData: string[] = [];
+
+  let streamCompleted = false;
+
+  const processEvent = (): boolean => {
+    if (!currentEventType) {
+      currentEventData = [];
+      return false;
+    }
+
+    const data = currentEventData.join('\n');
+
+    const shouldStop = dispatchEvent(
+      currentEventType,
+      data,
+      onEvent,
+      onError
+    );
+
+    currentEventType = '';
+    currentEventData = [];
+
+    return shouldStop;
+  };
 
   try {
-    // eslint-disable-next-line no-constant-condition
     while (true) {
+      if (signal?.aborted) {
+        return;
+      }
+
       const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
 
-      const lines = buffer.split('\n');
-      // Keep the last partial line in the buffer.
-      buffer = lines.pop() ?? '';
+      /*
+       * --------------------------------------------------------
+       * Stream closed
+       * --------------------------------------------------------
+       */
 
-      for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (line === '') {
-          // Blank line terminates an event block.
-          if (currentEventField && currentEventData) {
-            const ev: SSEEvent = { type: currentEventField as SSEEvent['type'], data: currentEventData };
-            onEvent(ev);
-            if (ev.type === 'done') return;
-            if (ev.type === 'error') {
-              onError?.(new Error(currentEventData));
+      if (done) {
+        /*
+         * Process a final event even if the backend did not send
+         * the final blank line required by SSE.
+         */
+        if (currentEventType) {
+          streamCompleted = processEvent();
+
+          if (streamCompleted) {
+            return;
+          }
+        }
+
+        /*
+         * Process any remaining buffered line.
+         */
+        if (buffer.trim()) {
+          const line = buffer.trim();
+
+          if (line.startsWith('event:')) {
+            currentEventType = line
+              .slice('event:'.length)
+              .trim();
+          } else if (line.startsWith('data:')) {
+            currentEventData.push(
+              line.slice('data:'.length).trim()
+            );
+          }
+
+          buffer = '';
+
+          if (currentEventType) {
+            streamCompleted = processEvent();
+
+            if (streamCompleted) {
               return;
             }
           }
-          currentEventField = '';
-          currentEventData = '';
+        }
+
+        /*
+         * A normal HTTP/SSE stream closure is not automatically
+         * an error. The backend may close after producing the
+         * final interviewer message.
+         */
+        if (!streamCompleted) {
+          onEvent({
+            type: 'done',
+            data: 'true',
+          });
+        }
+
+        return;
+      }
+
+      buffer += decoder.decode(value, {
+        stream: true,
+      });
+
+      /*
+       * Normalize CRLF / CR into LF.
+       */
+      buffer = buffer.replace(/\r\n/g, '\n');
+      buffer = buffer.replace(/\r/g, '\n');
+
+      const lines = buffer.split('\n');
+
+      /*
+       * Keep incomplete final line.
+       */
+      buffer = lines.pop() ?? '';
+
+      for (const rawLine of lines) {
+        const line = rawLine;
+
+        /*
+         * Blank line = end of SSE event.
+         */
+        if (line.trim() === '') {
+          const shouldStop = processEvent();
+
+          if (shouldStop) {
+            return;
+          }
+
           continue;
         }
 
-        const parsed = parseSSELine(line);
-        if (!parsed) continue;
+        /*
+         * SSE comments / keep-alive.
+         */
+        if (line.startsWith(':')) {
+          continue;
+        }
 
-        if (parsed.event === 'event') {
-          currentEventField = parsed.data;
-        } else if (parsed.event === 'data') {
-          currentEventData += currentEventData ? '\n' + parsed.data : parsed.data;
+        /*
+         * event: token
+         */
+        if (line.startsWith('event:')) {
+          currentEventType = line
+            .slice('event:'.length)
+            .trim();
+
+          continue;
+        }
+
+        /*
+         * data: some text
+         */
+        if (line.startsWith('data:')) {
+          currentEventData.push(
+            line.slice('data:'.length).trim()
+          );
+
+          continue;
         }
       }
     }
-
-    // Stream closed without explicit done — treat as finished.
-    if (currentEventField === 'token' && currentEventData) {
-      onEvent({ type: 'done', data: 'true' });
-    } else {
-      onError?.(new Error('Stream connection closed unexpectedly.'));
-    }
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') return;
-    onError?.(err as Error);
+    if (
+      err instanceof DOMException &&
+      err.name === 'AbortError'
+    ) {
+      return;
+    }
+
+    if (signal?.aborted) {
+      return;
+    }
+
+    onError?.(
+      err instanceof Error
+        ? err
+        : new Error('SSE streaming failed.')
+    );
   } finally {
     reader.releaseLock();
   }

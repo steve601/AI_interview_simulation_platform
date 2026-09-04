@@ -20,7 +20,6 @@ class TechnicalModel(BaseModel):
     strong_answer_indicators: List[str] = Field(...,description="Characteristics of a strong answer")
     weak_answer_indicators: List[str] = Field(...,description="Characteristics of a weak answer")
 
-
 class SystemDesignModel(BaseModel):
     number_of_questions: int = Field(default=5,description="Number of behavioral questions")
     topics: List[str] = Field(...,description="Topics to cover")

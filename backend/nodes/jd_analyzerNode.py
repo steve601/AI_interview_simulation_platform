@@ -19,7 +19,7 @@ class JDAnalyzerNode:
 
         chain = prompt | self.llm
 
-        result = chain.invoke({"job_description": job_description})
+        result = chain.invoke({"jd_text": job_description})
 
         return {
             "jd_analysis": result
