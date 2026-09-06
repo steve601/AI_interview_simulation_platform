@@ -4,9 +4,7 @@ from langgraph.graph.state import CompiledStateGraph
 from api.dependancies import get_interview_graph
 from services.file_reader import read_cv
 
-
 router = APIRouter()
-
 
 @router.post("/generate-plan")
 async def generate_interview_plan(

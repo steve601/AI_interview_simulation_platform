@@ -3,7 +3,7 @@ from langchain_core.prompts import PromptTemplate, PromptTemplate
 # Prompts for conducting technical interview and evaluating candidate's responses
 class TechnicalPrompt:
     @staticmethod
-    def get_technical_interview_prompt(technical_plan) -> PromptTemplate:
+    def get_technical_interview_prompt(technical_plan) -> str:
 
         system_prompt = """
                 You are PromptHire's Technical Interviewer.
@@ -48,10 +48,8 @@ class TechnicalPrompt:
                 Return only the next interviewer message.
                 """
 
-        return PromptTemplate.from_template(
-            system_prompt
-        )
-
+        return system_prompt
+        
     @staticmethod
     def get_technical_evaluation_prompt(technical_plan) -> PromptTemplate:
 

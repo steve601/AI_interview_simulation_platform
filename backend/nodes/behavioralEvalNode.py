@@ -1,33 +1,22 @@
-from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from state.interviewstate import InterviewState
 from langchain_core.messages import SystemMessage
 from prompts.behavioral_prompt import BehavioralPrompt
 from services.llm_factory import get_llm
-import os
-
-
-load_dotenv()
-
 
 class BehavioralEvaluatorNode:
-
+    """
+    This node evaluates the user's responses in a behavioral interview based on the interview plan generated in the previous node.
+    It takes the interview plan and the current state of the interview from the interview state, processes them through the LLM with the BehavioralPrompt, and updates the interview state with the evaluation results."""
     def __init__(self):
 
         self.llm = get_llm()
 
     def __call__(self, state: InterviewState) -> dict:
-        """
-        Evaluate the candidate's completed behavioral interview.
 
-        The conversation is retrieved from LangGraph's
-        checkpointed messages state.
-        """
-
-        interview_plan = state.interview_plan
+        interview_plan = state["interview_plan"]
         behavioral_plan = interview_plan.behavioral
 
-        # conversation history is maintained by LangGraph's checkpointer through the messages state
+        # get the convo history, the messages consist of HumanMessage and AIMessage objects, which are used to represent the conversation between the user and the AI during the behavioral interview.
         messages = state.get("messages", [])
 
         if not messages:
@@ -35,20 +24,12 @@ class BehavioralEvaluatorNode:
                 "No behavioral interview messages found in state."
             )
 
+        # prompt initialization for behavioral evaluation, using the behavioral plan to generate a system message that will guide the LLM in evaluating the user's responses.
         prompt = BehavioralPrompt.get_behavior_evaluation_prompt(behavioral_plan)
+        system_message = SystemMessage(content = prompt)
 
-        system_message = SystemMessage(
-            content = prompt
-        )
-
-        evaluation_messages = [
-            system_message,
-            *messages
-        ]
-
-        response = self.llm.invoke(
-            evaluation_messages
-        )
+        evaluation_messages = [system_message,*messages]
+        response = self.llm.invoke(evaluation_messages)
 
         return {
             "behavioral_evaluation": response.content

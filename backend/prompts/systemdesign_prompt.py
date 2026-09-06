@@ -3,7 +3,7 @@ from langchain_core.prompts import PromptTemplate
 # Prompts for conducting system design interview and evaluating candidate's responses
 class SystemDesignPrompt:
     @staticmethod
-    def get_system_design_interview_prompt(systemdesign_plan) -> PromptTemplate:
+    def get_system_design_interview_prompt(systemdesign_plan) -> str:
         system_prompt = """
                 You are PromptHire's System Design Interviewer.
                 Conduct a professional system design interview based on the System Design
@@ -56,8 +56,7 @@ class SystemDesignPrompt:
                 Return only the next interviewer message.
                 """
 
-        return PromptTemplate.from_template(
-            system_prompt)
+        return system_prompt
     
     @staticmethod
     def get_system_design_evaluation_prompt(systemdesign_plan) -> PromptTemplate:

@@ -5,13 +5,14 @@ class CVPrompt:
     def get_prompt() -> PromptTemplate:
         return PromptTemplate.from_template(
             """
-            You are a Senior Technical Recruiter at Microsoft. Your task is to distill the candidate's CV into a high-impact, executive-level professional summary.
+            You are a Senior Technical Recruiter at a larger tech company like Microsoft, OpenAI, Meta. 
+            Your task is to distill the candidate's CV into a high-impact, executive-level professional summary.
 
             TARGET TONE & STYLE:
-            - Microsoft-caliber: Professional, precise, quantifiable, and impact-driven.
+            - Microsoft/OpenAI/Meta-caliber: Professional, precise, quantifiable, and impact-driven.
             - No fluff: Remove generic adjectives (e.g., "hardworking," "passionate").
             - Action-oriented: Use strong verbs (e.g., "Architected," "Scaled," "Optimized").
-            - Concise: Maximum 150 words.
+            - Concise: Minimum of 80 words, maximum of 150 words. Avoid filler content.
 
             INSTRUCTIONS:
             1. Synthesize the candidate's identity: [Role/Title] + [Years of Exp] + [Core Technical Stack].

@@ -206,24 +206,74 @@ export interface InterviewPlanBackend {
  * Shape returned by GET /api/feedback/{thread_id}.
  * Mirrors backend/api/routes/feedback.py + models/feedback_model.py.
  */
+export type ScoreBand =
+  | 'Excellent'
+  | 'Good'
+  | 'Average'
+  | 'Below Average';
+
+export type ReadinessBand =
+  | 'Strong alignment'
+  | 'Good alignment'
+  | 'Partial alignment'
+  | 'Significant development needed';
+
+export type PriorityLevel =
+  | 'High Priority'
+  | 'Medium Priority'
+  | 'Low Priority';
+
+export interface ImprovementItem {
+  area: string;
+  evidence: string;
+  why_it_matters: string;
+  improvement_action: string;
+}
+
+export interface NextStep {
+  priority: PriorityLevel;
+  recommendation: string;
+}
+
+export interface FeedbackModel {
+  candidate_name: string | null;
+  target_role: string | null;
+  organization: string | null;
+
+  overall_score: number | null;
+  score_band: ScoreBand | null;
+
+  behavioral_score: number | null;
+  technical_score: number | null;
+  system_design_score: number | null;
+
+  overall_performance: string;
+
+  behavioral_performance: string | null;
+  technical_performance: string | null;
+  system_design_performance: string | null;
+
+  strengths: string[];
+
+  areas_for_improvement: ImprovementItem[];
+
+  role_readiness: ReadinessBand;
+
+  recommended_next_steps: NextStep[];
+
+  final_feedback: string;
+}
+
 export interface FeedbackResponseBackend {
   status: string;
-  feedback: {
-    candidate_name: string;
-    target_role: string;
-    organization: string;
-    overall_score?: number | null;
-    score_band?: string | null;
-    behavioral_score?: number | null;
-    technical_score?: number | null;
-    system_design_score?: number | null;
-    overall_performance: string;
-    strengths: string[];
-    areas_for_improvement: string[];
-    additional_comments?: string | null;
-  } | null;
-  behavioral_evaluation: string | null;
-  technical_evaluation: string | null;
-  system_design_evaluation: string | null;
+
+  feedback: FeedbackModel | null;
+
+  behavioral_evaluation: unknown;
+  technical_evaluation: unknown;
+  system_design_evaluation: unknown;
+
   interview_completed: boolean;
 }
+
+

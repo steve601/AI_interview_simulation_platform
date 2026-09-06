@@ -3,13 +3,12 @@ from models.feedback_model import FeedbackModel
 from state.interviewstate import InterviewState
 from services.llm_factory import get_llm
 
-
 class FeedbackNode:
-
+    """
+    This node generates feedback for the user based on the evaluations from the behavioral, technical, and system design interviews.
+    It takes the evaluation results from the interview state, processes them through the LLM with the FeedbackPrompt, and updates the interview state with the feedback results."""
     def __init__(self):
-        self.llm = get_llm().with_structured_output(
-            FeedbackModel
-        )
+        self.llm = get_llm().with_structured_output(FeedbackModel)
 
     def __call__(self, state: InterviewState) -> dict:
 
@@ -37,7 +36,6 @@ class FeedbackNode:
         )
 
         prompt = FeedbackPrompt.get_prompt()
-
         chain = prompt | self.llm
 
         result = chain.invoke({

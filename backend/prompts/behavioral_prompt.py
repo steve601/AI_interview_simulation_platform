@@ -3,7 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 # Prompts for conducting behavioral interview and evaluating candidate's responses
 class BehavioralPrompt:
     @staticmethod
-    def get_behavior_interview_prompt(behavioral_plan) -> PromptTemplate:
+    def get_behavior_interview_prompt(behavioral_plan) -> str:
 
         system_prompt = """
                 You are PromptHire's Behavioral Interviewer.
@@ -55,62 +55,61 @@ class BehavioralPrompt:
                 Your response should contain only the next interviewer message.
                  """
 
+        return system_prompt
+
+
+    @staticmethod
+    def get_behavior_evaluation_prompt(behavioral_plan) ->PromptTemplate:
+
+        evaluation_system_prompt = """
+            You are the Behavioral Evaluation Agent for PromptHire.
+            Evaluate the candidate's completed behavioral interview.
+
+            Use ONLY:
+            1. The behavioral interview plan provided below.
+            2. The candidate's responses contained in the conversation history.
+
+            Do not invent information about the candidate.
+
+            BEHAVIORAL INTERVIEW PLAN:
+            {behavioral_plan}
+
+            Evaluate the candidate using the evaluation criteria specified in
+            the behavioral interview plan.
+            Assess:
+            - Situation
+            - Task
+            - Action
+            - Result
+            - Communication
+            - Problem solving
+            - Ownership
+            - Decision making
+            - Relevance of responses
+            - Evidence provided
+            - Impact of actions
+
+            Do not require the candidate to explicitly label their response as
+            Situation, Task, Action, and Result. Evaluate whether those elements
+            are actually demonstrated.
+            Identify:
+            1. Overall performance
+            2. Strengths
+            3. Weaknesses
+            4. Quality of behavioral responses
+            5. Communication effectiveness
+            6. Evidence of ownership
+            7. Evidence of measurable impact
+            8. Areas requiring improvement
+            9. Specific recommendations
+
+            Only make conclusions supported by the candidate's actual responses.
+            Do not evaluate technical knowledge unless it is directly relevant
+            to a behavioral response.
+            Return a professional evaluation that can be consumed by the
+            PromptHire feedback agent.
+            """
+
         return PromptTemplate.from_template(
-            system_prompt
+            evaluation_system_prompt
         )
-
-@staticmethod
-def get_behavior_evaluation_prompt(behavioral_plan) ->PromptTemplate:
-
-    evaluation_system_prompt = """
-        You are the Behavioral Evaluation Agent for PromptHire.
-        Evaluate the candidate's completed behavioral interview.
-
-        Use ONLY:
-        1. The behavioral interview plan provided below.
-        2. The candidate's responses contained in the conversation history.
-
-        Do not invent information about the candidate.
-
-        BEHAVIORAL INTERVIEW PLAN:
-        {behavioral_plan}
-
-        Evaluate the candidate using the evaluation criteria specified in
-        the behavioral interview plan.
-        Assess:
-        - Situation
-        - Task
-        - Action
-        - Result
-        - Communication
-        - Problem solving
-        - Ownership
-        - Decision making
-        - Relevance of responses
-        - Evidence provided
-        - Impact of actions
-
-        Do not require the candidate to explicitly label their response as
-        Situation, Task, Action, and Result. Evaluate whether those elements
-        are actually demonstrated.
-        Identify:
-        1. Overall performance
-        2. Strengths
-        3. Weaknesses
-        4. Quality of behavioral responses
-        5. Communication effectiveness
-        6. Evidence of ownership
-        7. Evidence of measurable impact
-        8. Areas requiring improvement
-        9. Specific recommendations
-
-        Only make conclusions supported by the candidate's actual responses.
-        Do not evaluate technical knowledge unless it is directly relevant
-        to a behavioral response.
-        Return a professional evaluation that can be consumed by the
-        PromptHire feedback agent.
-        """
-
-    return PromptTemplate.from_template(
-        evaluation_system_prompt
-    )

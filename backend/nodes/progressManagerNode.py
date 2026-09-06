@@ -13,39 +13,23 @@ class ProgressManagerNode:
 
     def __call__(self, state: InterviewState) -> Dict:
 
-        current_round = state.get(
-            "current_round"
-        )
-
-        current_question_index = state.get(
-            "current_question_index",
-            0
-        )
+        current_round = state.get("current_round")
+        current_question_index = state.get("current_question_index",0)
 
         interview_plan = state.get("interview_plan")
-
         if interview_plan is None:
             raise ValueError(
                 "Interview plan is required for progress management."
             )
 
         if current_round == "behavioral":
-
-            total_questions = (
-                interview_plan.behavioral.number_of_questions
-            )
+            total_questions = (interview_plan.behavioral.number_of_questions)
 
         elif current_round == "technical":
-
-            total_questions = (
-                interview_plan.technical.number_of_questions
-            )
+            total_questions = (interview_plan.technical.number_of_questions)
 
         elif current_round == "system_design":
-
-            total_questions = (
-                interview_plan.system_design.number_of_questions
-            )
+            total_questions = (interview_plan.system_design.number_of_questions)
 
         else:
             return {
@@ -53,26 +37,15 @@ class ProgressManagerNode:
             }
 
         # determine if the current round has been completed
-        round_completed = (
-            current_question_index >= total_questions
-        )
+        round_completed = (current_question_index >= total_questions)
 
         if current_round == "behavioral":
-
-            return {
-                "behavioral_completed": round_completed
-            }
+            return {"behavioral_completed": round_completed}
 
         elif current_round == "technical":
-
-            return {
-                "technical_completed": round_completed
-            }
+            return {"technical_completed": round_completed}
 
         elif current_round == "system_design":
-
-            return {
-                "system_design_completed": round_completed
-            }
+            return {"system_design_completed": round_completed}
 
         return {}

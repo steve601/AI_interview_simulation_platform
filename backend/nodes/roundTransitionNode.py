@@ -2,17 +2,13 @@ from langgraph.types import interrupt
 from state.interviewstate import InterviewState
 
 class RoundTransitionNode:
-
+    """
+    This node handles the transition between different rounds of the interview process.
+    It checks the current round in the interview state and updates it to the next round, resetting the current question index and setting the next_round_requested flag to False. It also sends an interrupt message to notify the user that they have completed the current round and can proceed to the next round."""
     def __call__(self, state: InterviewState):
-        """
-        Manages transitions between different stages of a mock interview.
-        It acts as a human-in-the-loop checkpoint to pause execution and reset state 
-        counters between interview rounds.
-        """
-        current_round = state.get(
-            "current_round"
-        )
+        current_round = state.get("current_round")
 
+        # pause the graph execution and send an interrupt message to the user
         interrupt({
             "type": "round_completed",
             "round": current_round,

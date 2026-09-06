@@ -1,7 +1,6 @@
 from langgraph.types import interrupt
 from state.interviewstate import InterviewState
 
-
 class AnalysisGateNode:
     """
     Pauses the graph after the interview planner has generated

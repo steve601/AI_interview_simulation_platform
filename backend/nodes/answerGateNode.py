@@ -16,6 +16,7 @@ class AnswerGateNode:
 
     def __call__(self, state: InterviewState) -> dict:
 
+        # pause the graph execution and send an interrupt message to the user
         user_answer = interrupt({
             "type": "candidate_answer_required",
             "message": (
@@ -24,6 +25,7 @@ class AnswerGateNode:
             ),
         })
 
+        # checks whether the user_answer is a non-empty string. If it is, it returns a dictionary containing the user's answer wrapped in a HumanMessage object. If the user_answer is not a valid string (e.g., it's empty or None), it returns an empty dictionary.
         if isinstance(user_answer, str) and user_answer.strip():
 
             return {

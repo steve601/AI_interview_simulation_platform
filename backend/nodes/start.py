@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Dict
 from state.interviewstate import InterviewState
 
 # starting point of our graph
@@ -20,28 +20,16 @@ def start_node(state: InterviewState) -> Dict:
 
         "interview_plan": state.get("interview_plan"),
 
-        "behavioral_evaluation": state.get(
-            "behavioral_evaluation"
-        ),
+        "behavioral_evaluation": state.get("behavioral_evaluation"),
 
-        "technical_evaluation": state.get(
-            "technical_evaluation"
-        ),
+        "technical_evaluation": state.get("technical_evaluation"),
 
-        "system_design_evaluation": state.get(
-            "system_design_evaluation"
-        ),
+        "system_design_evaluation": state.get("system_design_evaluation"),
 
         "feedback": state.get("feedback"),
         "report": state.get("report"),
 
-        "behavioral_completed": state.get(
-            "behavioral_completed", False
-        ),
-        "technical_completed": state.get(
-            "technical_completed", False
-        ),
-        "system_design_completed": state.get(
-            "system_design_completed", False
-        ),
+        "behavioral_completed": state.get("behavioral_completed", False),
+        "technical_completed": state.get("technical_completed", False),
+        "system_design_completed": state.get("system_design_completed", False),
     }

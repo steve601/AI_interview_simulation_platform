@@ -1,16 +1,15 @@
-/**
- * Custom hook for managing SSE streaming interview sessions.
- *
- * Wraps the backend's /interview/start, /interview/answer, and
- * /interview/next-round SSE endpoints with progressive token
- * accumulation, error handling, and abort support.
- */
-import { useRef, useCallback } from 'react';
-import { useInterview } from "../context/InterviewContext";
+import { useCallback } from 'react';
+import { useInterview } from '../context/InterviewContext';
 import { api } from '../services/api';
 import { ApiError } from '../types';
 
-
+/**
+ * Interview session hook.
+ *
+ * Uses normal JSON API requests.
+ * Streaming/SSE can be added later without changing
+ * the RoundInterview component interface.
+ */
 export const useInterviewStream = () => {
   const {
     appendMessage,
@@ -20,134 +19,153 @@ export const useInterviewStream = () => {
     setApiError,
   } = useInterview();
 
-  // AbortController gives us a way to cancel the stream on unmount
-  // or when the user submits a new answer.
-  const abortRef = useRef<AbortController | null>(null);
-
-  const cleanup = useCallback(() => {
-    if (abortRef.current) {
-      abortRef.current.abort();
-      abortRef.current = null;
-    }
-  }, []);
-
+  /**
+   * Start the interview and display the first question.
+   */
   const startInterview = useCallback(
-    (threadId: string) => {
-      cleanup();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
+    async (threadId: string) => {
       setIsLoadingInterview(true);
       setApiError(null);
 
-      let accumulatedText = '';
+      try {
+        const result = await api.startInterview(threadId);
 
-      api.startInterview(
-        threadId,
-        (token) => {
-          accumulatedText += token;
-        },
-        () => {
-          // Done — flush accumulated message as assistant
-          if (accumulatedText.trim()) {
-            appendMessage({ role: 'assistant', content: accumulatedText.trim() });
-          }
-          accumulatedText = '';
-          setIsLoadingInterview(false);
-        },
-        (err: ApiError) => {
-          setApiError(err);
-          setIsLoadingInterview(false);
-          addToast({
-            type: 'error',
-            title: 'Connection Error',
-            message: err.detail || 'Failed to start interview session.',
+        if (result.question && result.question.trim()) {
+          appendMessage({
+            role: 'assistant',
+            content: result.question,
           });
-        },
-        controller.signal
-      );
+        } else {
+          throw new Error('The backend returned no interview question.');
+        }
+      } catch (err) {
+        const error = err as ApiError;
+
+        setApiError(error);
+
+        addToast({
+          type: 'error',
+          title: 'Connection Error',
+          message:
+            error.detail || 'Failed to start interview session.',
+        });
+      } finally {
+        setIsLoadingInterview(false);
+      }
     },
-    [appendMessage, setIsLoadingInterview, setApiError, addToast, cleanup]
+    [
+      appendMessage,
+      setIsLoadingInterview,
+      setApiError,
+      addToast,
+    ]
   );
 
+  /**
+   * Submit the candidate's answer and display
+   * the next interviewer question.
+   */
   const submitAnswer = useCallback(
-    (threadId: string, answer: string) => {
-      cleanup();
-      const controller = new AbortController();
-      abortRef.current = controller;
+    async (threadId: string, answer: string) => {
+      if (!answer.trim()) {
+        return;
+      }
 
-      // Add the user's answer immediately
-      appendMessage({ role: 'user', content: answer });
+      // Display candidate's answer immediately.
+      appendMessage({
+        role: 'user',
+        content: answer.trim(),
+      });
+
       setIsSubmitting(true);
       setApiError(null);
 
-      let accumulatedText = '';
+      try {
+        const result = await api.submitAnswer(
+          threadId,
+          answer.trim()
+        );
 
-      api.submitAnswer(
-        threadId,
-        answer,
-        (token) => {
-          accumulatedText += token;
-        },
-        () => {
-          if (accumulatedText.trim()) {
-            appendMessage({ role: 'assistant', content: accumulatedText.trim() });
-          }
-          accumulatedText = '';
-          setIsSubmitting(false);
-        },
-        (err: ApiError) => {
-          setApiError(err);
-          setIsSubmitting(false);
-          addToast({
-            type: 'error',
-            title: 'Answer Submission Error',
-            message: err.detail || 'Failed to submit your answer.',
+        if (result.question && result.question.trim()) {
+          appendMessage({
+            role: 'assistant',
+            content: result.question,
           });
-        },
-        controller.signal
-      );
+        }
+      } catch (err) {
+        const error = err as ApiError;
+
+        setApiError(error);
+
+        addToast({
+          type: 'error',
+          title: 'Answer Submission Error',
+          message:
+            error.detail || 'Failed to submit your answer.',
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
     },
-    [appendMessage, setIsSubmitting, setApiError, addToast, cleanup]
+    [
+      appendMessage,
+      setIsSubmitting,
+      setApiError,
+      addToast,
+    ]
   );
 
+  /**
+   * Move to the next interview round and display
+   * the first question of that round.
+   */
   const triggerNextRound = useCallback(
-    (threadId: string) => {
-      cleanup();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
+    async (threadId: string) => {
       setIsLoadingInterview(true);
       setApiError(null);
 
-      let accumulatedText = '';
+      try {
+        const result = await api.nextRound(threadId);
 
-      api.nextRound(
-        threadId,
-        (token) => {
-          accumulatedText += token;
-        },
-        () => {
-          if (accumulatedText.trim()) {
-            appendMessage({ role: 'assistant', content: accumulatedText.trim() });
-          }
-          accumulatedText = '';
-          setIsLoadingInterview(false);
-        },
-        (err: ApiError) => {
-          setApiError(err);
-          setIsLoadingInterview(false);
-          addToast({
-            type: 'error',
-            title: 'Round Transition Error',
-            message: err.detail || 'Failed to start the next round.',
+        if (result.question && result.question.trim()) {
+          appendMessage({
+            role: 'assistant',
+            content: result.question,
           });
-        },
-        controller.signal
-      );
+        } else {
+          throw new Error(
+            'The backend returned no question for the next round.'
+          );
+        }
+      } catch (err) {
+        const error = err as ApiError;
+
+        setApiError(error);
+
+        addToast({
+          type: 'error',
+          title: 'Round Transition Error',
+          message:
+            error.detail ||
+            'Failed to start the next interview round.',
+        });
+      } finally {
+        setIsLoadingInterview(false);
+      }
     },
-    [appendMessage, setIsLoadingInterview, setApiError, addToast, cleanup]
+    [
+      appendMessage,
+      setIsLoadingInterview,
+      setApiError,
+      addToast,
+    ]
   );
 
-  return { startInterview, submitAnswer, triggerNextRound, cleanup };
+  return {
+    startInterview,
+    submitAnswer,
+    triggerNextRound,
+  };
 };
+
+

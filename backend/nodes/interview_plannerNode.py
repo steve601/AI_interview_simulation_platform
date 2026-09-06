@@ -3,18 +3,15 @@ from models.planner_model import InterviewPlanModel
 from state.interviewstate import InterviewState
 from services.llm_factory import get_llm
 
-
 class InterviewPlannerNode:
-
+    """
+    This node generates an interview plan based on the analysis of the user's resume (CV), job description (JD), and gap analysis using a language model (LLM) and a predefined prompt template.
+    It takes the CV analysis, JD analysis, and gap analysis from the interview state, processes them through the LLM with the InterviewPlannerPrompt, and updates the interview state with the generated interview plan."""
     def __init__(self):
-        self.llm = get_llm(4000).with_structured_output(
-            InterviewPlanModel
-        )
+        self.llm = get_llm().with_structured_output(InterviewPlanModel)
 
     def __call__(self, state: InterviewState):
-        """
-        Generates an interview plan based on the CV analysis, job description analysis, and gap analysis using a language model.
-        """
+
         cv_analysis = state["cv_analysis"]
         jd_analysis = state["jd_analysis"]
         gap_analysis = state["gap_analysis"]
