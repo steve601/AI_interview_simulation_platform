@@ -69,7 +69,7 @@ flowchart TD
 		R --> S[System-design evaluation]
 		S --> T[Round transition interrupt]
 		T --> U[Feedback generation]
-		U --> V[GET /api/feedback{thread_id}]
+		U --> V["GET /api/feedback{thread_id}"]
 		V --> W[Report page]
 ```
 
