@@ -1,15 +1,50 @@
 import { useCallback } from 'react';
+
 import { useInterview } from '../context/InterviewContext';
 import { api } from '../services/api';
 import { ApiError } from '../types';
 
-/**
- * Interview session hook.
- *
- * Uses normal JSON API requests.
- * Streaming/SSE can be added later without changing
- * the RoundInterview component interface.
- */
+type QuestionContent =
+  | string
+  | Array<{
+      type?: string;
+      text?: string;
+      [key: string]: unknown;
+    }>
+  | null
+  | undefined;
+
+function normaliseQuestion(
+  content: QuestionContent
+): string {
+  if (!content) {
+    return '';
+  }
+
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+
+  if (Array.isArray(content)) {
+    return content
+      .map((block) => {
+        if (
+          block &&
+          typeof block.text === 'string'
+        ) {
+          return block.text;
+        }
+
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+
+  return '';
+}
+
 export const useInterviewStream = () => {
   const {
     appendMessage,
@@ -19,27 +54,46 @@ export const useInterviewStream = () => {
     setApiError,
   } = useInterview();
 
-  /**
-   * Start the interview and display the first question.
-   */
   const startInterview = useCallback(
     async (threadId: string) => {
+      if (!threadId?.trim()) {
+        addToast({
+          type: 'error',
+          title: 'Invalid Interview Session',
+          message:
+            'No interview thread ID was provided.',
+        });
+
+        return;
+      }
+
       setIsLoadingInterview(true);
       setApiError(null);
 
       try {
-        const result = await api.startInterview(threadId);
+        const result =
+          await api.startInterview(
+            threadId
+          );
 
-        if (result.question && result.question.trim()) {
-          appendMessage({
-            role: 'assistant',
-            content: result.question,
-          });
-        } else {
-          throw new Error('The backend returned no interview question.');
+        const question =
+          normaliseQuestion(
+            result.question
+          );
+
+        if (!question) {
+          throw new Error(
+            'The backend returned no interview question.'
+          );
         }
+
+        appendMessage({
+          role: 'assistant',
+          content: question,
+        });
       } catch (err) {
-        const error = err as ApiError;
+        const error =
+          err as ApiError;
 
         setApiError(error);
 
@@ -47,7 +101,9 @@ export const useInterviewStream = () => {
           type: 'error',
           title: 'Connection Error',
           message:
-            error.detail || 'Failed to start interview session.',
+            error.detail ||
+            error.message ||
+            'Failed to start interview session.',
         });
       } finally {
         setIsLoadingInterview(false);
@@ -61,39 +117,75 @@ export const useInterviewStream = () => {
     ]
   );
 
-  /**
-   * Submit the candidate's answer and display
-   * the next interviewer question.
-   */
   const submitAnswer = useCallback(
-    async (threadId: string, answer: string) => {
-      if (!answer.trim()) {
+    async (
+      threadId: string,
+      answer: string
+    ) => {
+      const cleanedAnswer =
+        answer.trim();
+
+      if (!cleanedAnswer) {
+        addToast({
+          type: 'warning',
+          title: 'Answer Required',
+          message:
+            'Please provide an answer before continuing.',
+        });
+
         return;
       }
 
-      // Display candidate's answer immediately.
+      if (!threadId?.trim()) {
+        addToast({
+          type: 'error',
+          title: 'Invalid Interview Session',
+          message:
+            'No interview thread ID was provided.',
+        });
+
+        return;
+      }
+
+      /*
+       * Show the candidate answer immediately.
+       */
       appendMessage({
         role: 'user',
-        content: answer.trim(),
+        content: cleanedAnswer,
       });
 
       setIsSubmitting(true);
       setApiError(null);
 
       try {
-        const result = await api.submitAnswer(
-          threadId,
-          answer.trim()
-        );
+        const result =
+          await api.submitAnswer(
+            threadId,
+            cleanedAnswer
+          );
 
-        if (result.question && result.question.trim()) {
+        const question =
+          normaliseQuestion(
+            result.question
+          );
+
+        /*
+         * The backend can legitimately return
+         * no question when the round has completed.
+         *
+         * Do NOT treat null/empty question as an
+         * API error.
+         */
+        if (question) {
           appendMessage({
             role: 'assistant',
-            content: result.question,
+            content: question,
           });
         }
       } catch (err) {
-        const error = err as ApiError;
+        const error =
+          err as ApiError;
 
         setApiError(error);
 
@@ -101,7 +193,9 @@ export const useInterviewStream = () => {
           type: 'error',
           title: 'Answer Submission Error',
           message:
-            error.detail || 'Failed to submit your answer.',
+            error.detail ||
+            error.message ||
+            'Failed to submit your answer.',
         });
       } finally {
         setIsSubmitting(false);
@@ -115,51 +209,69 @@ export const useInterviewStream = () => {
     ]
   );
 
-  /**
-   * Move to the next interview round and display
-   * the first question of that round.
-   */
-  const triggerNextRound = useCallback(
-    async (threadId: string) => {
-      setIsLoadingInterview(true);
-      setApiError(null);
-
-      try {
-        const result = await api.nextRound(threadId);
-
-        if (result.question && result.question.trim()) {
-          appendMessage({
-            role: 'assistant',
-            content: result.question,
+  const triggerNextRound =
+    useCallback(
+      async (threadId: string) => {
+        if (!threadId?.trim()) {
+          addToast({
+            type: 'error',
+            title: 'Invalid Interview Session',
+            message:
+              'No interview thread ID was provided.',
           });
-        } else {
-          throw new Error(
-            'The backend returned no question for the next round.'
-          );
+
+          return;
         }
-      } catch (err) {
-        const error = err as ApiError;
 
-        setApiError(error);
+        setIsLoadingInterview(true);
+        setApiError(null);
 
-        addToast({
-          type: 'error',
-          title: 'Round Transition Error',
-          message:
-            error.detail ||
-            'Failed to start the next interview round.',
-        });
-      } finally {
-        setIsLoadingInterview(false);
-      }
-    },
-    [
-      appendMessage,
-      setIsLoadingInterview,
-      setApiError,
-      addToast,
-    ]
-  );
+        try {
+          const result =
+            await api.nextRound(
+              threadId
+            );
+
+          const question =
+            normaliseQuestion(
+              result.question
+            );
+
+          /*
+           * If the backend moves to "completed",
+           * there may be no question.
+           */
+          if (question) {
+            appendMessage({
+              role: 'assistant',
+              content: question,
+            });
+          }
+        } catch (err) {
+          const error =
+            err as ApiError;
+
+          setApiError(error);
+
+          addToast({
+            type: 'error',
+            title: 'Round Transition Error',
+            message:
+              error.detail ||
+              error.message ||
+              'Failed to start the next interview round.',
+          });
+        } finally {
+          setIsLoadingInterview(false);
+        }
+      },
+      [
+        appendMessage,
+        setIsLoadingInterview,
+        setApiError,
+        addToast,
+      ]
+    );
 
   return {
     startInterview,
@@ -167,5 +279,3 @@ export const useInterviewStream = () => {
     triggerNextRound,
   };
 };
-
-

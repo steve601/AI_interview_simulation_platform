@@ -2,6 +2,9 @@ import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def get_llm(max_tokens=4096):
@@ -13,7 +16,7 @@ def get_llm(max_tokens=4096):
     if groq_api_key:
         groq = ChatGroq(
             model=os.getenv(
-                "GROQ_MODEL_NAME", "deepseek-r1-distill-llama-70b"
+                "GROQ_MODEL_NAME", "openai/gpt-oss-120b"
             ),
             api_key=groq_api_key,
             temperature=temperature,

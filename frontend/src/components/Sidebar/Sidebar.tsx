@@ -21,8 +21,17 @@ export const Sidebar: React.FC = () => {
     sidebarOpen,
     setSidebarOpen,
     roundProgress,
-    interviewPlan
+    interviewPlan,
+    currentRound,
   } = useInterview();
+
+  const getRoundStatus = (round: 'behavioral' | 'technical' | 'system-design') => {
+    const progress = roundProgress[round];
+    if (progress.completed) return 'Done';
+    if (currentRound === round) return 'Current';
+    if (progress.answeredCount > 0) return `${progress.answeredCount}/${progress.totalCount}`;
+    return 'Not started';
+  };
 
   const navItems = [
     {
@@ -47,25 +56,19 @@ export const Sidebar: React.FC = () => {
       label: 'Behavioral Round',
       path: '/interview/behavioral',
       icon: <MessageSquare className="w-4 h-4" />,
-      badge: roundProgress.behavioral.completed
-        ? 'Done'
-        : `${roundProgress.behavioral.answeredCount}/${roundProgress.behavioral.totalCount}`
+      badge: getRoundStatus('behavioral')
     },
     {
       label: 'Technical Round',
       path: '/interview/technical',
       icon: <Code className="w-4 h-4" />,
-      badge: roundProgress.technical.completed
-        ? 'Done'
-        : `${roundProgress.technical.answeredCount}/${roundProgress.technical.totalCount}`
+      badge: getRoundStatus('technical')
     },
     {
       label: 'System Design',
       path: '/interview/system-design',
       icon: <Layers className="w-4 h-4" />,
-      badge: roundProgress['system-design'].completed
-        ? 'Done'
-        : `${roundProgress['system-design'].answeredCount}/${roundProgress['system-design'].totalCount}`
+      badge: getRoundStatus('system-design')
     },
     {
       label: 'Final Evaluation Report',
@@ -133,6 +136,8 @@ export const Sidebar: React.FC = () => {
                             ? 'bg-blue-800 text-blue-100'
                             : isCompleted
                             ? 'bg-green-100 text-green-800 font-semibold'
+                            : item.badge === 'Current'
+                            ? 'bg-blue-100 text-blue-800 font-semibold'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -153,32 +158,30 @@ export const Sidebar: React.FC = () => {
             </div>
 
             <div className="space-y-2 bg-[#FAFAFA] p-3 rounded-sm border border-[#E2E8F0]">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#334155] font-medium">1. Behavioral</span>
-                {roundProgress.behavioral.completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <CircleDot className="w-4 h-4 text-blue-600" />
-                )}
-              </div>
+              {([
+                ['behavioral', '1. Behavioral'],
+                ['technical', '2. Technical'],
+                ['system-design', '3. System Design'],
+              ] as const).map(([round, label]) => {
+                const progress = roundProgress[round];
+                const isCurrent = currentRound === round && !progress.completed;
 
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#334155] font-medium">2. Technical</span>
-                {roundProgress.technical.completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <CircleDot className="w-4 h-4 text-slate-400" />
-                )}
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#334155] font-medium">3. System Design</span>
-                {roundProgress['system-design'].completed ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                ) : (
-                  <CircleDot className="w-4 h-4 text-slate-400" />
-                )}
-              </div>
+                return (
+                  <div key={round} className="flex items-center justify-between text-xs">
+                    <div className="flex min-w-0 items-center gap-2">
+                      {progress.completed ? (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                      ) : (
+                        <CircleDot className={`h-4 w-4 shrink-0 ${isCurrent ? 'text-blue-600' : 'text-slate-400'}`} />
+                      )}
+                      <span className="truncate font-medium text-[#334155]">{label}</span>
+                    </div>
+                    <span className={`ml-2 shrink-0 text-[10px] font-mono ${isCurrent ? 'font-semibold text-blue-700' : 'text-slate-500'}`}>
+                      {progress.completed ? 'Complete' : `${progress.answeredCount}/${progress.totalCount}`}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

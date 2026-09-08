@@ -1,29 +1,43 @@
 import { API_ENDPOINTS } from '../config';
+
 import {
   InterviewPlanBackend,
   FeedbackResponseBackend,
   ApiError,
 } from '../types';
 
-/**
- * Normalise fetch / backend errors.
- */
-function toApiError(err: unknown, defaultDetail: string): ApiError {
+function toApiError(
+  err: unknown,
+  defaultDetail: string
+): ApiError {
   if (err instanceof Error) {
-    const e: ApiError = new Error(
-      (err as ApiError).detail || defaultDetail
-    );
+    const original =
+      err as ApiError;
 
-    e.status = (err as ApiError).status;
-    e.detail = (err as ApiError).detail || defaultDetail;
+    const message =
+      original.detail ||
+      original.message ||
+      defaultDetail;
 
-    return e;
+    const error: ApiError =
+      new Error(message);
+
+    error.status =
+      original.status;
+
+    error.detail =
+      original.detail ||
+      defaultDetail;
+
+    return error;
   }
 
-  const e: ApiError = new Error(defaultDetail);
-  e.detail = defaultDetail;
+  const error: ApiError =
+    new Error(defaultDetail);
 
-  return e;
+  error.detail = defaultDetail;
+
+  return error;
 }
 
 async function handleResponse(
@@ -31,80 +45,158 @@ async function handleResponse(
   defaultDetail: string
 ): Promise<unknown> {
   if (!resp.ok) {
-    let detail = defaultDetail;
+    let detail =
+      defaultDetail;
 
     try {
-      const body = await resp.json();
-      detail = body?.detail || defaultDetail;
-    } catch {
-      const text = await resp.text().catch(() => '');
+      const body =
+        await resp.json();
 
-      if (text) {
-        detail = text;
+      if (
+        body &&
+        typeof body.detail === 'string'
+      ) {
+        detail = body.detail;
+      }
+    } catch {
+      try {
+        const text =
+          await resp.text();
+
+        if (text) {
+          detail = text;
+        }
+      } catch {
+        // Keep default detail.
       }
     }
 
-    const e: ApiError = new Error(
-      `API error ${resp.status}: ${detail}`
-    );
+    const error: ApiError =
+      new Error(
+        `API error ${resp.status}: ${detail}`
+      );
 
-    e.status = resp.status;
-    e.detail = detail;
+    error.status =
+      resp.status;
 
-    throw e;
+    error.detail = detail;
+
+    throw error;
   }
 
-  return resp.json();
+  try {
+    return await resp.json();
+  } catch {
+    const error: ApiError =
+      new Error(
+        'The server returned an invalid JSON response.'
+      );
+
+    error.status =
+      resp.status;
+
+    error.detail =
+      'The server returned an invalid JSON response.';
+
+    throw error;
+  }
 }
 
 export const api = {
   /**
    * Generate interview plan.
+   *
+   * POST /api/analysis/generate-plan
+   *
+   * multipart/form-data:
+   *   cv_file
+   *   job_description
    */
   async generatePlan(
     cvFile: File,
     jobDescription: string
   ): Promise<InterviewPlanBackend> {
-    const form = new FormData();
+    try {
+      if (!cvFile) {
+        throw new Error(
+          'CV file is required.'
+        );
+      }
 
-    form.append('cv_file', cvFile);
-    form.append('job_description', jobDescription);
+      if (!jobDescription.trim()) {
+        throw new Error(
+          'Job description is required.'
+        );
+      }
 
-    const resp = await fetch(API_ENDPOINTS.generatePlan, {
-      method: 'POST',
-      body: form,
-    });
+      const form =
+        new FormData();
 
-    return (await handleResponse(
-      resp,
-      'Failed to generate interview plan.'
-    )) as InterviewPlanBackend;
+      form.append(
+        'cv_file',
+        cvFile
+      );
+
+      form.append(
+        'job_description',
+        jobDescription
+      );
+
+      const resp =
+        await fetch(
+          API_ENDPOINTS.generatePlan,
+          {
+            method: 'POST',
+            body: form,
+          }
+        );
+
+      return (await handleResponse(
+        resp,
+        'Failed to generate interview plan.'
+      )) as InterviewPlanBackend;
+    } catch (err) {
+      throw toApiError(
+        err,
+        'Failed to generate interview plan.'
+      );
+    }
   },
 
   /**
    * Start interview.
    *
-   * Backend returns normal JSON:
-   *
-   * {
-   *   status: "success",
-   *   thread_id: "...",
-   *   question: "Tell me about yourself..."
-   * }
+   * POST /api/interview/start
    */
   async startInterview(
     threadId: string
-  ): Promise<{ status: string; thread_id: string; question: string | null }> {
+  ): Promise<{
+    status: string;
+    thread_id: string;
+    question: string | null;
+  }> {
     try {
-      const resp = await fetch(API_ENDPOINTS.startInterview, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          thread_id: threadId,
-        }),
-      });
+      if (!threadId.trim()) {
+        throw new Error(
+          'Interview thread ID is required.'
+        );
+      }
+
+      const resp =
+        await fetch(
+          API_ENDPOINTS.startInterview,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              thread_id:
+                threadId,
+            }),
+          }
+        );
 
       return (await handleResponse(
         resp,
@@ -115,30 +207,56 @@ export const api = {
         question: string | null;
       };
     } catch (err) {
-      throw toApiError(err, 'Failed to start interview.');
+      throw toApiError(
+        err,
+        'Failed to start interview.'
+      );
     }
   },
 
   /**
    * Submit candidate answer.
    *
-   * Backend returns normal JSON containing the next question.
+   * POST /api/interview/answer
    */
   async submitAnswer(
     threadId: string,
     answer: string
-  ): Promise<{ status: string; thread_id: string; question: string | null }> {
+  ): Promise<{
+    status: string;
+    thread_id: string;
+    question: string | null;
+  }> {
     try {
-      const resp = await fetch(API_ENDPOINTS.submitAnswer, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          thread_id: threadId,
-          answer,
-        }),
-      });
+      if (!threadId.trim()) {
+        throw new Error(
+          'Interview thread ID is required.'
+        );
+      }
+
+      if (!answer.trim()) {
+        throw new Error(
+          'Answer cannot be empty.'
+        );
+      }
+
+      const resp =
+        await fetch(
+          API_ENDPOINTS.submitAnswer,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              thread_id:
+                threadId,
+              answer:
+                answer.trim(),
+            }),
+          }
+        );
 
       return (await handleResponse(
         resp,
@@ -149,29 +267,47 @@ export const api = {
         question: string | null;
       };
     } catch (err) {
-      throw toApiError(err, 'Failed to submit answer.');
+      throw toApiError(
+        err,
+        'Failed to submit answer.'
+      );
     }
   },
 
   /**
-   * Move to the next interview round.
+   * Move to next interview round.
    *
-   * Keep this normal JSON as well if your backend endpoint
-   * is no longer using SSE.
+   * POST /api/interview/next-round
    */
   async nextRound(
     threadId: string
-  ): Promise<{ status: string; thread_id: string; question?: string | null }> {
+  ): Promise<{
+    status: string;
+    thread_id: string;
+    question?: string | null;
+  }> {
     try {
-      const resp = await fetch(API_ENDPOINTS.nextRound, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          thread_id: threadId,
-        }),
-      });
+      if (!threadId.trim()) {
+        throw new Error(
+          'Interview thread ID is required.'
+        );
+      }
+
+      const resp =
+        await fetch(
+          API_ENDPOINTS.nextRound,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+            body: JSON.stringify({
+              thread_id:
+                threadId,
+            }),
+          }
+        );
 
       return (await handleResponse(
         resp,
@@ -182,26 +318,47 @@ export const api = {
         question?: string | null;
       };
     } catch (err) {
-      throw toApiError(err, 'Failed to move to next round.');
+      throw toApiError(
+        err,
+        'Failed to move to next round.'
+      );
     }
   },
 
   /**
    * Retrieve final feedback.
+   *
+   * GET /api/feedback/{thread_id}
    */
   async getFeedback(
     threadId: string
   ): Promise<FeedbackResponseBackend> {
-    const resp = await fetch(
-      API_ENDPOINTS.getFeedback(threadId),
-      {
-        method: 'GET',
+    try {
+      if (!threadId.trim()) {
+        throw new Error(
+          'Interview thread ID is required.'
+        );
       }
-    );
 
-    return (await handleResponse(
-      resp,
-      'Failed to retrieve feedback report.'
-    )) as FeedbackResponseBackend;
+      const resp =
+        await fetch(
+          API_ENDPOINTS.getFeedback(
+            threadId
+          ),
+          {
+            method: 'GET',
+          }
+        );
+
+      return (await handleResponse(
+        resp,
+        'Failed to retrieve feedback report.'
+      )) as FeedbackResponseBackend;
+    } catch (err) {
+      throw toApiError(
+        err,
+        'Failed to retrieve feedback report.'
+      );
+    }
   },
 };

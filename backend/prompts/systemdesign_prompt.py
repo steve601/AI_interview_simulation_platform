@@ -1,5 +1,3 @@
-from langchain_core.prompts import PromptTemplate
-
 # Prompts for conducting system design interview and evaluating candidate's responses
 class SystemDesignPrompt:
     @staticmethod
@@ -40,6 +38,12 @@ class SystemDesignPrompt:
                 13. Do not invent candidate experience.
                 14. Do not repeat questions already addressed.
                 15. Stay aligned with the interview plan.
+                16. DO NOT include question number in your question, just ask question direct.
+                17. NEVER ask technical interview questions.
+                18. Ask exactly 4 system design questions.
+                19. After the 4th system design  question has been answered, do NOT ask another question.
+                20. Instead, provide a brief closing message thanking the candidate and
+                    directing them to the System Design round.
 
                 Useful follow-up areas:
                 - Why did you choose this architecture?
@@ -59,10 +63,9 @@ class SystemDesignPrompt:
         return system_prompt
     
     @staticmethod
-    def get_system_design_evaluation_prompt(systemdesign_plan) -> PromptTemplate:
+    def get_system_design_evaluation_prompt(systemdesign_plan) -> str:
 
-        return PromptTemplate.from_template(
-            """
+        evaluation_system_promot = """
                 You are PromptHire's System Design Evaluation Agent.
                 Evaluate the candidate's system design response based on the interview
                 plan and target role.
@@ -117,4 +120,5 @@ class SystemDesignPrompt:
                 {systemdesign_plan}
                 Return a structured internal evaluation.
                 """
-        )
+        return evaluation_system_promot
+        

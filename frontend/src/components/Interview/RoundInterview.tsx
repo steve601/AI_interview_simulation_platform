@@ -58,6 +58,7 @@ export const RoundInterview: React.FC<RoundInterviewProps> = ({
     interviewPlan,
     interviewMessages,
     setCurrentRound,
+    setRoundProgress,
     isLoadingInterview,
     isSubmitting,
     apiError,
@@ -86,6 +87,20 @@ export const RoundInterview: React.FC<RoundInterviewProps> = ({
     () => visibleMessages.filter((m) => m.role === 'user').length,
     [visibleMessages]
   );
+
+  useEffect(() => {
+    if (questionsInRound === 0) return;
+
+    setRoundProgress((previous) => ({
+      ...previous,
+      [roundType]: {
+        ...previous[roundType],
+        answeredCount: Math.min(answersSubmitted, questionsInRound),
+        totalCount: questionsInRound,
+        completed: answersSubmitted >= questionsInRound,
+      },
+    }));
+  }, [answersSubmitted, questionsInRound, roundType, setRoundProgress]);
 
   const busy = isLoadingInterview || isSubmitting;
 

@@ -107,11 +107,11 @@ class InterviewGraph:
 
         # round transition routing, shared across all rounds
         self.graph.add_conditional_edges(
-            "round_transition",
-            Routing.route_after_round_transition,
+            "round_transition", # router name
+            Routing.route_after_round_transition, # function
             {
-                "technical":
-                    "technical_interviewer",
+                "technical": # edge name
+                    "technical_interviewer", # next node
 
                 "system_design":
                     "system_design_interviewer",

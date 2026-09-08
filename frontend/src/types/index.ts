@@ -93,30 +93,6 @@ export interface QuestionFeedback {
   sampleIdealResponse: string;
 }
 
-export interface FinalReportData {
-  interviewId: string;
-  candidateName: string;
-  jobTitle: string;
-  company: string;
-  completedAt: string;
-  overallScore: number | null;
-  recommendation: string;
-  roundScores: {
-    behavioral: number | null;
-    technical: number | null;
-    systemDesign: number | null;
-  };
-  keyStrengths: string[];
-  areasForImprovement: string[];
-  executiveFeedback: string;
-  recommendedLearningPath: {
-    topic: string;
-    actionItem: string;
-    priority: 'High' | 'Medium' | 'Low';
-  }[];
-  detailedQuestionFeedbacks: QuestionFeedback[];
-}
-
 export interface ToastMessage {
   id: string;
   type: 'success' | 'info' | 'warning' | 'error';

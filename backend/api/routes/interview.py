@@ -89,17 +89,12 @@ async def submit_answer(
         )
 
     try:
-        print(f"SUBMITTING ANSWER: {request.thread_id}")
-
         result = await graph.ainvoke(
             Command(resume=request.answer),
             config=config,
         )
 
         question = get_latest_question(result)
-
-        print("ANSWER PROCESSED")
-        print("NEXT QUESTION GENERATED")
 
         return {
             "status": "success",
@@ -108,13 +103,14 @@ async def submit_answer(
         }
 
     except Exception as exc:
-        print(f"SUBMIT ANSWER ERROR: {exc}")
+        import traceback
+        traceback.print_exc()
 
         raise HTTPException(
             status_code=500,
             detail=f"Failed to submit answer: {str(exc)}",
         )
-
+        
 
 @router.post("/next-round")
 async def next_round(
