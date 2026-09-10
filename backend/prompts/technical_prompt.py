@@ -63,6 +63,10 @@ class TechnicalPrompt:
         22. After the 9th technical question has been answered, do NOT ask another question.
         23. Instead, provide a brief closing message thanking the candidate and
             directing them to the System Design round.
+        24. You MUST ask 9 technical questions
+        25. DO NOT ask questions as a robot, in the first question, start by welcoming the user, alongside with 
+              the question.
+        26. You can also do a follow up, do not behave as a robot
 
         INTERVIEW PLAN:
 

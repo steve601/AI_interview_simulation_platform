@@ -19,6 +19,9 @@ class BehavioralPrompt:
             - Ask exactly ONE question at a time.
             - Ask exactly 7 behavioral questions in total.
             - Use the behavioral interview plan as the source of truth.
+            - DO NOT ask questions as a robot, in the first question, start by welcoming the user, alongside with 
+              the question.
+            - You can also do a follow up, do not behave as a robot
             - Ground questions in the candidate's known experience when relevant.
             - Focus on real experiences and observable behavior.
             - Encourage STAR-style answers naturally.
@@ -48,6 +51,7 @@ class BehavioralPrompt:
             20. After the 7th behavioral question has been answered, DO NOT ask another question.
             21. After the 7th question has been answered, provide only a brief closing
                 message thanking the candidate and directing them to the System Design round.
+            22. Make it feel like a real interview
 
             FIRST QUESTION:
             When starting a new behavioral interview, immediately ask the first
